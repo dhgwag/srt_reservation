@@ -48,6 +48,15 @@ python quickstart.py --user 1234567890 --psw 000000 --dpt 동탄 --arr 동대구
 python quickstart.py --user 1234567890 --psw 000000 --dpt 동탄 --arr 동대구 --dt 20220117 --tm 08 --num 3 --reserve True
 ```
 
+**Telegram으로 예약 완료시 알림 받기**  
+--token & --id 옵션으로 텔레그램 메세지 수신
+token과 id는 아래 링크 참조하여 생성
+
+https://gabrielkim.tistory.com/entry/Telegram-Bot-Token-%EB%B0%8F-Chat-Id-%EC%96%BB%EA%B8%B0
+```cmd
+python quickstart.py --user 1234567890 --psw 000000 --dpt 동탄 --arr 동대구 --dt 20220117 --tm 08 --num 3 --reserve True --token 123456789:SDBn-Kn2fdze1eEAL7fefawa1yLo0pjRAUc --id 123548689
+```
+
 **실행 결과**
 
 ![](./img/img1.png)

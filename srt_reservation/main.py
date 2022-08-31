@@ -9,6 +9,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
 from selenium.common.exceptions import ElementClickInterceptedException, StaleElementReferenceException, WebDriverException
+import telegram
 
 from srt_reservation.exceptions import InvalidStationNameError, InvalidDateError, InvalidDateFormatError, InvalidTimeFormatError
 from srt_reservation.validation import station_list
@@ -18,7 +19,7 @@ chromedriver_path = r'C:\workspace\chromedriver.exe'
 
 
 class SRT:
-    def __init__(self, dpt_stn, arr_stn, dpt_dt, dpt_tm, num_trains_to_check=2, want_reserve=False):
+    def __init__(self, dpt_stn, arr_stn, dpt_dt, dpt_tm, num_trains_to_check=2, want_reserve=False, telegram_token="", telegram_id=""):
         """
         :param dpt_stn: SRT 출발역
         :param arr_stn: SRT 도착역
@@ -34,6 +35,8 @@ class SRT:
         self.arr_stn = arr_stn
         self.dpt_dt = dpt_dt
         self.dpt_tm = dpt_tm
+        self.token = telegram_token
+        self.id = telegram_id
 
         self.num_trains_to_check = num_trains_to_check
         self.want_reserve = want_reserve
@@ -43,6 +46,11 @@ class SRT:
         self.cnt_refresh = 0  # 새로고침 회수 기록
 
         self.check_input()
+
+    def telegram_logging(self, msg):
+        if self.token != "" and self.id != "":
+            bot = telegram.Bot(token=self.token)
+            bot.sendMessage(chat_id=self.id, text=msg)
 
     def check_input(self):
         if self.dpt_stn not in station_list:
@@ -80,6 +88,7 @@ class SRT:
     def check_login(self):
         menu_text = self.driver.find_element(By.CSS_SELECTOR, "#wrap > div.header.header-e > div.global.clear > div").text
         if "환영합니다" in menu_text:
+            self.telegram_logging("로그인 성공. 예약을 시도합니다")
             return True
         else:
             return False
@@ -147,6 +156,8 @@ class SRT:
                     if self.driver.find_elements(By.ID, 'isFalseGotoMain'):
                         is_booked = True
                         print("예약 성공")
+                        self.telegram_logging("예약 성공")
+
                         return self.driver
                     else:
                         print("잔여석 없음. 다시 검색")
@@ -156,6 +167,7 @@ class SRT:
                 if self.want_reserve:
                     if "신청하기" in reservation:
                         print("예약 대기 완료")
+                        self.telegram_logging("예약 대기 완료")
                         self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(8) > a").click()
                         is_booked = True
                         return self.driver
@@ -177,6 +189,7 @@ class SRT:
         self.run_driver()
         self.set_log_info(login_id, login_psw)
         self.login()
+        self.check_login()
         self.go_search()
         self.refresh_search_result()
 

@@ -14,6 +14,9 @@ def parse_cli_args():
     parser.add_argument("--num", help="no of trains to check", type=int, metavar="2", default=2)
     parser.add_argument("--reserve", help="Reserve or not", type=bool, metavar="2", default=False)
 
+    parser.add_argument("--token", help="telegram chat room token", type=str, metavar="123456789:SDBn-Kn2fdze1eEAL7fefawa1yLo0pjRAUc", default="")
+    parser.add_argument("--id", help="telegram user chat id", type=str, metavar="123548689", default="")
+
     args = parser.parse_args()
 
     return args
