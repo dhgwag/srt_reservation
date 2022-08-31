@@ -166,11 +166,26 @@ class SRT:
 
                 if self.want_reserve:
                     if "신청하기" in reservation:
-                        print("예약 대기 완료")
-                        self.telegram_logging("예약 대기 완료")
-                        self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(8) > a").click()
-                        is_booked = True
-                        return self.driver
+                        # Error handling in case that click does not work
+                        try:
+                            self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(8) > a").click()
+                        except ElementClickInterceptedException as err:
+                            print(err)
+                            self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(8) > a").send_keys(Keys.ENTER)
+                        finally:
+                            self.driver.implicitly_wait(3)
+
+                        # 예약이 성공하면
+                        if self.driver.find_elements(By.ID, 'isFalseGotoMain'):
+                            print("예약 대기 완료")
+                            self.telegram_logging("예약 대기 완료")
+                            self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(8) > a").click()
+                            is_booked = True
+                            return self.driver
+                        else:
+                            print("잔여석 없음. 다시 검색")
+                            self.driver.back()  # 뒤로가기
+                            self.driver.implicitly_wait(5)
 
             if not self.is_booked:
                 time.sleep(randint(2, 4))  # 2~4초 랜덤으로 기다리기
