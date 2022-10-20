@@ -40,9 +40,9 @@ business = True                 # 특실 예약 여부
 economy = True                  # 일반실 예약 여부
 reserve = True                  # 예약 대기 여부
 
-# 예약 성공 여부 텔레그램 수신 시 아래 정보 필요
-telegram_token = "123456789:SDBn-Kn2fdze1eEAL7fefawa1yLo0pjRAUc"
-telegram_id = "123548689"
+# 예약 성공 여부 텔레그램 수신 시 아래 정보 필요, 비워두면 텔레그램 무시
+telegram_token = "" #"123456789:SDBn-Kn2fdze1eEAL7fefawa1yLo0pjRAUc"
+telegram_id = "" #"123548689"
 ```
 
 
