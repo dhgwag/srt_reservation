@@ -7,7 +7,7 @@
 
 ## 다운
 ```cmd
-git clone https://github.com/kminito/srt_reservation.git
+git clone https://github.com/dhgwag/srt_reservation.git
 ```
   
 ## 필요
@@ -18,44 +18,45 @@ pip install -r requirements.txt
 ```
 
 
-## Arguments
-    dpt: SRT 출발역
-    arr: SRT 도착역
-    dt: 출발 날짜 YYYYMMDD 형태 ex) 20220115
-    tm: 출발 시간 hh 형태, 반드시 짝수 ex) 06, 08, 14, ...
-    num: 검색 결과 중 예약 가능 여부 확인할 기차의 수 (default : 2)
-    reserve: 예약 대기가 가능할 경우 선택 여부 (default : False)
+## Configuration
+**Config.py를 항목에 맞춰 변경**  
+```text
+user_id = "1234567890"          # SRT 회원번호
+user_pw = "abc1234"             # SRT 비밀번호
+dpt_stn = "동탄"                 # 출발역
+arr_stn = "동대구"               # 도착역
+dpt_date = "20221023"           # 출발일
+dpt_time = "08"                 # 출발 검색 시간 "08, 10, 12, ..."
 
-    station_list = ["수서", "동탄", "평택지제", "천안아산", "오송", "대전", "김천(구미)", "동대구",
-    "신경주", "울산(통도사)", "부산", "공주", "익산", "정읍", "광주송정", "나주", "목포"]
+from_idx = 2                    # 검색했을 때 예약할 열차 순번 시작 (1부터 시작)
+to_idx = 3                      # 검색했을 때 예약할 열차 순번 끝 (1부터 시작)
+# 예를 들어, from_idx가 1, to_idx가 1이면 검색 시 제일 윗 열차만 예약 시도
 
+adult_cnt = 1                   # 성인 숫자
+child_cnt = 0                   # 어린이 숫자
+old_cnt = 0                     # 노인 숫자
 
+business = True                 # 특실 예약 여부
+economy = True                  # 일반실 예약 여부
+reserve = True                  # 예약 대기 여부
 
-## 간단 사용법
-
-회원번호 1234567890  
-비밀번호 000000  
-동탄 -> 동대구, 2022년 01월 17일 오전 8시 이후 기차  
-검색 결과 중 상위 2개가 예약 가능할 경우 예약
-
-```cmd
-python quickstart.py --user 1234567890 --psw 000000 --dpt 동탄 --arr 동대구 --dt 20220117 --tm 08
+# 예약 성공 여부 텔레그램 수신 시 아래 정보 필요
+telegram_token = "123456789:SDBn-Kn2fdze1eEAL7fefawa1yLo0pjRAUc"
+telegram_id = "123548689"
 ```
 
-**Optional**  
-예약대기 사용 및 검색 결과 상위 3개의 예약 가능 여부 확인
-```cmd
-python quickstart.py --user 1234567890 --psw 000000 --dpt 동탄 --arr 동대구 --dt 20220117 --tm 08 --num 3 --reserve True
-```
 
-**Telegram으로 예약 완료시 알림 받기**  
---token & --id 옵션으로 텔레그램 메세지 수신
+**Telegram으로 예약 완료시 알림 받기**
 token과 id는 아래 링크 참조하여 생성
 
 https://gabrielkim.tistory.com/entry/Telegram-Bot-Token-%EB%B0%8F-Chat-Id-%EC%96%BB%EA%B8%B0
+
+## 간단 사용법
+
 ```cmd
-python quickstart.py --user 1234567890 --psw 000000 --dpt 동탄 --arr 동대구 --dt 20220117 --tm 08 --num 3 --reserve True --token 123456789:SDBn-Kn2fdze1eEAL7fefawa1yLo0pjRAUc --id 123548689
+python quickstart.py
 ```
+
 
 **실행 결과**
 

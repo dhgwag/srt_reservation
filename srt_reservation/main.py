@@ -9,6 +9,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
 from selenium.common.exceptions import ElementClickInterceptedException, StaleElementReferenceException, WebDriverException
+from config import *
 import telegram
 
 from srt_reservation.exceptions import InvalidStationNameError, InvalidDateError, InvalidDateFormatError, InvalidTimeFormatError
@@ -19,27 +20,22 @@ chromedriver_path = r'C:\workspace\chromedriver.exe'
 
 
 class SRT:
-    def __init__(self, dpt_stn, arr_stn, dpt_dt, dpt_tm, num_trains_to_check=2, want_reserve=False, telegram_token="", telegram_id=""):
-        """
-        :param dpt_stn: SRT 출발역
-        :param arr_stn: SRT 도착역
-        :param dpt_dt: 출발 날짜 YYYYMMDD 형태 ex) 20220115
-        :param dpt_tm: 출발 시간 hh 형태, 반드시 짝수 ex) 06, 08, 14, ...
-        :param num_trains_to_check: 검색 결과 중 예약 가능 여부 확인할 기차의 수 ex) 2일 경우 상위 2개 확인
-        :param want_reserve: 예약 대기가 가능할 경우 선택 여부
-        """
-        self.login_id = None
-        self.login_psw = None
+    def __init__(self):
+        self.login_id = user_id
+        self.login_psw = user_pw
 
         self.dpt_stn = dpt_stn
         self.arr_stn = arr_stn
-        self.dpt_dt = dpt_dt
-        self.dpt_tm = dpt_tm
+        self.dpt_dt = dpt_date
+        self.dpt_tm = dpt_time
         self.token = telegram_token
         self.id = telegram_id
 
-        self.num_trains_to_check = num_trains_to_check
-        self.want_reserve = want_reserve
+        self.from_idx = from_idx
+        self.to_idx = to_idx
+        self.business = business
+        self.economy = economy
+        self.reserve = reserve
         self.driver = None
 
         self.is_booked = False  # 예약 완료 되었는지 확인용
@@ -64,10 +60,6 @@ class SRT:
         except ValueError:
             raise InvalidDateError("날짜가 잘못 되었습니다. YYYYMMDD 형식으로 입력해주세요.")
 
-    def set_log_info(self, login_id, login_psw):
-        self.login_id = login_id
-        self.login_psw = login_psw
-
     def run_driver(self):
         try:
             self.driver = webdriver.Chrome(executable_path=chromedriver_path)
@@ -86,17 +78,16 @@ class SRT:
         return self.driver
 
     def check_login(self):
+        time.sleep(3)
         menu_text = self.driver.find_element(By.CSS_SELECTOR, "#wrap > div.header.header-e > div.global.clear > div").text
         if "환영합니다" in menu_text:
             self.telegram_logging("로그인 성공. 예약을 시도합니다")
             return True
         else:
+            self.telegram_logging("로그인 실패했지만, 예약을 시도합니다")
             return False
 
-
-
     def go_search(self):
-
         # 기차 조회 페이지로 이동
         self.driver.get('https://etk.srail.kr/hpg/hra/01/selectScheduleList.do')
         self.driver.implicitly_wait(5)
@@ -121,9 +112,22 @@ class SRT:
         self.driver.execute_script("arguments[0].setAttribute('style','display: True;')", elm_dpt_tm)
         Select(self.driver.find_element(By.ID, "dptTm")).select_by_visible_text(self.dpt_tm)
 
+        # 인원 수 입력
+        elm_adult_cnt = self.driver.find_element(By.NAME, "psgInfoPerPrnb1")
+        self.driver.execute_script("arguments[0].setAttribute('style','display: True;')", elm_adult_cnt)
+        Select(self.driver.find_element(By.NAME, "psgInfoPerPrnb1")).select_by_value(str(adult_cnt))
+
+        elm_child_cnt = self.driver.find_element(By.NAME, "psgInfoPerPrnb5")
+        self.driver.execute_script("arguments[0].setAttribute('style','display: True;')", elm_child_cnt)
+        Select(self.driver.find_element(By.NAME, "psgInfoPerPrnb5")).select_by_value(str(child_cnt))
+
+        elm_old_cnt = self.driver.find_element(By.NAME, "psgInfoPerPrnb4")
+        self.driver.execute_script("arguments[0].setAttribute('style','display: True;')", elm_old_cnt)
+        Select(self.driver.find_element(By.NAME, "psgInfoPerPrnb4")).select_by_value(str(old_cnt))
+
         print("기차를 조회합니다")
-        print(f"출발역:{self.dpt_stn} , 도착역:{self.arr_stn}\n날짜:{self.dpt_dt}, 시간: {self.dpt_tm}시 이후\n{self.num_trains_to_check}개의 기차 중 예약")
-        print(f"예약 대기 사용: {self.want_reserve}")
+        print(f"출발역:{self.dpt_stn} , 도착역:{self.arr_stn}\n날짜:{self.dpt_dt}, 시간: {self.dpt_tm}시 이후\n{self.from_idx}부터 {self.to_idx}까지 기차 중 예약")
+        print(f"특실 예약: {self.business}    일반실 예약: {self.economy}   예약 대기 사용: {self.reserve}")
 
         # 조회하기 버튼 클릭
         self.driver.find_element(By.XPATH, "//input[@value='조회하기']").click()
@@ -132,15 +136,41 @@ class SRT:
 
     def refresh_search_result(self):
         while True:
-            for i in range(1, self.num_trains_to_check+1):
+            for i in range(self.from_idx, self.to_idx+1):
                 try:
-                    standard_seat = self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(7)").text
+                    business_seat = self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(6)").text
+                    economy_seat = self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(7)").text
                     reservation = self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(8)").text
                 except StaleElementReferenceException:
-                    standard_seat = "매진"
+                    business_seat = "매진"
+                    economy_seat = "매진"
                     reservation = "매진"
 
-                if "예약하기" in standard_seat:
+                if business and "예약하기" in business_seat:
+                    print("예약 가능 클릭")
+
+                    # Error handling in case that click does not work
+                    try:
+                        self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(6) > a").click()
+                    except ElementClickInterceptedException as err:
+                        print(err)
+                        self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(6) > a").send_keys(Keys.ENTER)
+                    finally:
+                        self.driver.implicitly_wait(3)
+
+                    # 예약이 성공하면
+                    if self.driver.find_elements(By.ID, 'isFalseGotoMain'):
+                        self.is_booked = True
+                        print("예약 성공")
+                        self.telegram_logging("예약 성공")
+
+                        return self.driver
+                    else:
+                        print("잔여석 없음. 다시 검색")
+                        self.driver.back()  # 뒤로가기
+                        self.driver.implicitly_wait(5)
+
+                if economy and "예약하기" in economy_seat:
                     print("예약 가능 클릭")
 
                     # Error handling in case that click does not work
@@ -154,7 +184,7 @@ class SRT:
 
                     # 예약이 성공하면
                     if self.driver.find_elements(By.ID, 'isFalseGotoMain'):
-                        is_booked = True
+                        self.is_booked = True
                         print("예약 성공")
                         self.telegram_logging("예약 성공")
 
@@ -164,28 +194,26 @@ class SRT:
                         self.driver.back()  # 뒤로가기
                         self.driver.implicitly_wait(5)
 
-                if self.want_reserve:
-                    if "신청하기" in reservation:
-                        # Error handling in case that click does not work
-                        try:
-                            self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(8) > a").click()
-                        except ElementClickInterceptedException as err:
-                            print(err)
-                            self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(8) > a").send_keys(Keys.ENTER)
-                        finally:
-                            self.driver.implicitly_wait(3)
+                if reserve and "신청하기" in reservation:
+                    # Error handling in case that click does not work
+                    try:
+                        self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(8) > a").click()
+                    except ElementClickInterceptedException as err:
+                        print(err)
+                        self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(8) > a").send_keys(Keys.ENTER)
+                    finally:
+                        self.driver.implicitly_wait(3)
 
-                        # 예약이 성공하면
-                        if self.driver.find_elements(By.ID, 'isFalseGotoMain'):
-                            print("예약 대기 완료")
-                            self.telegram_logging("예약 대기 완료")
-                            self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(8) > a").click()
-                            is_booked = True
-                            return self.driver
-                        else:
-                            print("잔여석 없음. 다시 검색")
-                            self.driver.back()  # 뒤로가기
-                            self.driver.implicitly_wait(5)
+                    # 예약이 성공하면
+                    if self.driver.find_elements(By.ID, 'agree'):
+                        print("예약 대기 완료")
+                        self.telegram_logging("예약 대기 완료")
+                        self.is_booked = True
+                        return self.driver
+                    else:
+                        print("잔여석 없음. 다시 검색")
+                        self.driver.back()  # 뒤로가기
+                        self.driver.implicitly_wait(5)
 
             if not self.is_booked:
                 time.sleep(randint(2, 4))  # 2~4초 랜덤으로 기다리기
@@ -200,9 +228,8 @@ class SRT:
             else:
                 return self.driver
 
-    def run(self, login_id, login_psw):
+    def run(self):
         self.run_driver()
-        self.set_log_info(login_id, login_psw)
         self.login()
         self.check_login()
         self.go_search()
