@@ -136,6 +136,9 @@ class SRT:
 
     def refresh_search_result(self):
         while True:
+            while '접속대기' in self.driver.page_source:
+                pass
+            time.sleep(.8)
             for i in range(self.from_idx, self.to_idx+1):
                 try:
                     business_seat = self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(6)").text
@@ -217,7 +220,7 @@ class SRT:
 
             if not self.is_booked:
                 time.sleep(randint(2, 4))  # 2~4초 랜덤으로 기다리기
-
+                
                 # 다시 조회하기
                 submit = self.driver.find_element(By.XPATH, "//input[@value='조회하기']")
                 self.driver.execute_script("arguments[0].click();", submit)
