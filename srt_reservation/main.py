@@ -138,7 +138,7 @@ class SRT:
         while True:
             while '접속대기' in self.driver.page_source:
                 pass
-            time.sleep(.8)
+            
             for i in range(self.from_idx, self.to_idx+1):
                 try:
                     business_seat = self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(6)").text
