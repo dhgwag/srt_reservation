@@ -209,6 +209,17 @@ class SRT:
 
                     # 예약이 성공하면
                     if self.driver.find_elements(By.ID, 'agree'):
+                        self.driver.find_element(By.ID, 'agree').click()
+                        self.driver.find_element(By.ID, 'smsY').click()
+                        result = self.driver.switch_to_alert()
+                        result.accept()
+                        self.driver.find_element(By.ID, 'phoneNum1').send_keys(phoneNoMid)
+                        self.driver.find_element(By.ID, 'phoneNum2').send_keys(phoneNoEnd)
+                        self.driver.find_element(By.ID, 'diffSeatN').click()
+                        self.driver.find_element(By.ID, 'moveTicketList').click()
+                        result2 = self.driver.switch_to_alert()
+                        result2.accept()
+
                         print("예약 대기 완료")
                         self.telegram_logging("예약 대기 완료")
                         self.is_booked = True
