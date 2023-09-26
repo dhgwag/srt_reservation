@@ -61,10 +61,7 @@ class SRT:
             raise InvalidDateError("날짜가 잘못 되었습니다. YYYYMMDD 형식으로 입력해주세요.")
 
     def run_driver(self):
-        try:
-            self.driver = webdriver.Chrome(executable_path=chromedriver_path)
-        except WebDriverException:
-            self.driver = webdriver.Chrome(ChromeDriverManager().install())
+        self.driver = webdriver.Chrome()
 
 
     def login(self):
@@ -150,7 +147,7 @@ class SRT:
                     reservation = "매진"
 
                 if business and "예약하기" in business_seat:
-                    print("예약 가능 클릭")
+                    print("특실 예약 가능 클릭")
 
                     # Error handling in case that click does not work
                     try:
@@ -174,7 +171,7 @@ class SRT:
                         self.driver.implicitly_wait(5)
 
                 if economy and "예약하기" in economy_seat:
-                    print("예약 가능 클릭")
+                    print("일반실 예약 가능 클릭")
 
                     # Error handling in case that click does not work
                     try:
@@ -248,6 +245,7 @@ class SRT:
         self.check_login()
         self.go_search()
         self.refresh_search_result()
+        input()
 
 
 # if __name__ == "__main__":
