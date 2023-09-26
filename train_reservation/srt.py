@@ -12,17 +12,14 @@ from selenium.common.exceptions import ElementClickInterceptedException, StaleEl
 from config import *
 import telegram
 
-from srt_reservation.exceptions import InvalidStationNameError, InvalidDateError, InvalidDateFormatError, InvalidTimeFormatError
-from srt_reservation.validation import station_list
-
-# Chromedriver 없을 시 처음에는 자동으로 설치합니다.
-chromedriver_path = r'C:\workspace\chromedriver.exe'
+from train_reservation.exceptions import InvalidStationNameError, InvalidDateError, InvalidDateFormatError, InvalidTimeFormatError
+from train_reservation.validation import station_list
 
 
 class SRT:
     def __init__(self):
-        self.login_id = user_id
-        self.login_psw = user_pw
+        self.login_id = srt_user_id
+        self.login_psw = srt_user_pw
 
         self.dpt_stn = dpt_stn
         self.arr_stn = arr_stn
