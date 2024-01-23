@@ -4,11 +4,12 @@
 from train_reservation.srt import SRT
 from train_reservation.ktx import KTX
 from config import *
+import asyncio
 
 if __name__ == "__main__":
     if train == 'srt':
         srt = SRT()
-        srt.run()
+        asyncio.run(srt.run())
     else:
         ktx = KTX()
-        ktx.run()
+        asyncio.run(ktx.run())

@@ -40,10 +40,10 @@ class SRT:
 
         self.check_input()
 
-    def telegram_logging(self, msg):
+    async def telegram_logging(self, msg):
         if self.token != "" and self.id != "":
             bot = telegram.Bot(token=self.token)
-            bot.sendMessage(chat_id=self.id, text=msg)
+            await bot.sendMessage(chat_id=self.id, text=msg)
 
     def check_input(self):
         if self.dpt_stn not in station_list:
@@ -71,14 +71,14 @@ class SRT:
         self.driver.implicitly_wait(5)
         return self.driver
 
-    def check_login(self):
+    async def check_login(self):
         time.sleep(3)
         menu_text = self.driver.find_element(By.CSS_SELECTOR, "#wrap > div.header.header-e > div.global.clear > div").text
         if "환영합니다" in menu_text:
-            self.telegram_logging("로그인 성공. 예약을 시도합니다")
+            await self.telegram_logging("로그인 성공. 예약을 시도합니다")
             return True
         else:
-            self.telegram_logging("로그인 실패했지만, 예약을 시도합니다")
+            await self.telegram_logging("로그인 실패했지만, 예약을 시도합니다")
             return False
 
     def go_search(self):
@@ -128,7 +128,7 @@ class SRT:
         self.driver.implicitly_wait(5)
         time.sleep(1)
 
-    def refresh_search_result(self):
+    async def refresh_search_result(self):
         while True:
             while '접속대기' in self.driver.page_source:
                 pass
@@ -159,7 +159,7 @@ class SRT:
                     if self.driver.find_elements(By.ID, 'isFalseGotoMain'):
                         self.is_booked = True
                         print("예약 성공")
-                        self.telegram_logging("예약 성공")
+                        await self.telegram_logging("예약 성공")
 
                         return self.driver
                     else:
@@ -183,7 +183,7 @@ class SRT:
                     if self.driver.find_elements(By.ID, 'isFalseGotoMain'):
                         self.is_booked = True
                         print("예약 성공")
-                        self.telegram_logging("예약 성공")
+                        await self.telegram_logging("예약 성공")
 
                         return self.driver
                     else:
@@ -215,7 +215,7 @@ class SRT:
                         result2.accept()
 
                         print("예약 대기 완료")
-                        self.telegram_logging("예약 대기 완료")
+                        await self.telegram_logging("예약 대기 완료")
                         self.is_booked = True
                         return self.driver
                     else:
@@ -236,12 +236,12 @@ class SRT:
             else:
                 return self.driver
 
-    def run(self):
+    async def run(self):
         self.run_driver()
         self.login()
         self.check_login()
         self.go_search()
-        self.refresh_search_result()
+        await self.refresh_search_result()
         input()
 
 
