@@ -8,7 +8,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
-from selenium.common.exceptions import ElementClickInterceptedException, StaleElementReferenceException, WebDriverException
+from selenium.common.exceptions import ElementClickInterceptedException, StaleElementReferenceException, WebDriverException, UnexpectedAlertPresentException, NoAlertPresentException
 from config import *
 import telegram
 
@@ -130,112 +130,150 @@ class SRT:
 
     async def refresh_search_result(self):
         while True:
-            while '접속대기' in self.driver.page_source:
-                pass
-            
-            for i in range(self.from_idx, self.to_idx+1):
-                try:
-                    business_seat = self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(6)").text
-                    economy_seat = self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(7)").text
-                    reservation = self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(8)").text
-                except StaleElementReferenceException:
-                    business_seat = "매진"
-                    economy_seat = "매진"
-                    reservation = "매진"
-
-                if business and "예약하기" in business_seat:
-                    print("특실 예약 가능 클릭")
-
-                    # Error handling in case that click does not work
-                    try:
-                        self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(6) > a").click()
-                    except ElementClickInterceptedException as err:
-                        print(err)
-                        self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(6) > a").send_keys(Keys.ENTER)
-                    finally:
-                        self.driver.implicitly_wait(3)
-
-                    # 예약이 성공하면
-                    if self.driver.find_elements(By.ID, 'isFalseGotoMain'):
-                        self.is_booked = True
-                        print("예약 성공")
-                        await self.telegram_logging("예약 성공")
-
-                        return self.driver
-                    else:
-                        print("잔여석 없음. 다시 검색")
-                        self.driver.back()  # 뒤로가기
-                        self.driver.implicitly_wait(5)
-
-                if economy and "예약하기" in economy_seat:
-                    print("일반실 예약 가능 클릭")
-
-                    # Error handling in case that click does not work
-                    try:
-                        self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(7) > a").click()
-                    except ElementClickInterceptedException as err:
-                        print(err)
-                        self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(7) > a").send_keys(Keys.ENTER)
-                    finally:
-                        self.driver.implicitly_wait(3)
-
-                    # 예약이 성공하면
-                    if self.driver.find_elements(By.ID, 'isFalseGotoMain'):
-                        self.is_booked = True
-                        print("예약 성공")
-                        await self.telegram_logging("예약 성공")
-
-                        return self.driver
-                    else:
-                        print("잔여석 없음. 다시 검색")
-                        self.driver.back()  # 뒤로가기
-                        self.driver.implicitly_wait(5)
-
-                if reserve and "신청하기" in reservation:
-                    # Error handling in case that click does not work
-                    try:
-                        self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(8) > a").click()
-                    except ElementClickInterceptedException as err:
-                        print(err)
-                        self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(8) > a").send_keys(Keys.ENTER)
-                    finally:
-                        self.driver.implicitly_wait(3)
-
-                    # 예약이 성공하면
-                    if self.driver.find_elements(By.ID, 'agree'):
-                        # self.driver.find_element(By.ID, 'agree').click()
-                        # self.driver.find_element(By.ID, 'smsY').click()
-                        # result = self.driver.switch_to_alert()
-                        # result.accept()
-                        # self.driver.find_element(By.ID, 'phoneNum1').send_keys(phoneNoMid)
-                        # self.driver.find_element(By.ID, 'phoneNum2').send_keys(phoneNoEnd)
-                        # self.driver.find_element(By.ID, 'diffSeatN').click()
-                        # self.driver.find_element(By.ID, 'moveTicketList').click()
-                        # result2 = self.driver.switch_to_alert()
-                        # result2.accept()
-
-                        print("예약 대기 완료")
-                        await self.telegram_logging("예약 대기 완료")
-                        self.is_booked = True
-                        return self.driver
-                    else:
-                        print("잔여석 없음. 다시 검색")
-                        self.driver.back()  # 뒤로가기
-                        self.driver.implicitly_wait(5)
-
-            if not self.is_booked:
-                time.sleep(randint(2, 4))  # 2~4초 랜덤으로 기다리기
+            try:
+                while '접속대기' in self.driver.page_source:
+                    pass
                 
-                # 다시 조회하기
-                submit = self.driver.find_element(By.XPATH, "//input[@value='조회하기']")
-                self.driver.execute_script("arguments[0].click();", submit)
-                self.cnt_refresh += 1
-                print(f"새로고침 {self.cnt_refresh}회")
-                self.driver.implicitly_wait(10)
-                time.sleep(0.5)
-            else:
-                return self.driver
+                for i in range(self.from_idx, self.to_idx+1):
+                    try:
+                        business_seat = self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(6)").text
+                        economy_seat = self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(7)").text
+                        reservation = self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(8)").text
+                    except StaleElementReferenceException:
+                        business_seat = "매진"
+                        economy_seat = "매진"
+                        reservation = "매진"
 
+                    if business and "예약하기" in business_seat:
+                        print("특실 예약 가능 클릭")
+
+                        # Error handling in case that click does not work
+                        try:
+                            self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(6) > a").click()
+                        except ElementClickInterceptedException as err:
+                            print(err)
+                            self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(6) > a").send_keys(Keys.ENTER)
+                        finally:
+                            self.driver.implicitly_wait(3)
+
+                        try:
+                            for _ in range(3):
+                                time.sleep(1)
+                                alert = self.driver.switch_to.alert
+                                alert.accept()
+                                time.sleep(0.5)
+                        except:
+                            pass
+
+                        # 예약이 성공하면
+                        if self.driver.find_elements(By.ID, 'isFalseGotoMain'):
+                            self.is_booked = True
+                            print("예약 성공")
+                            await self.telegram_logging("예약 성공")
+
+                            return self.driver
+                        else:
+                            print("잔여석 없음. 다시 검색")
+                            self.driver.back()  # 뒤로가기
+                            self.driver.implicitly_wait(5)
+
+                    if economy and "예약하기" in economy_seat:
+                        print("일반실 예약 가능 클릭")
+
+                        # Error handling in case that click does not work
+                        try:
+                            self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(7) > a").click()
+                        except ElementClickInterceptedException as err:
+                            print(err)
+                            self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(7) > a").send_keys(Keys.ENTER)
+                        finally:
+                            self.driver.implicitly_wait(3)
+
+                        try:
+                            for _ in range(3):
+                                time.sleep(1)
+                                alert = self.driver.switch_to.alert
+                                alert.accept()
+                                time.sleep(0.5)
+                        except:
+                            pass
+
+                        # 예약이 성공하면
+                        if self.driver.find_elements(By.ID, 'isFalseGotoMain'):
+                            self.is_booked = True
+                            print("예약 성공")
+                            await self.telegram_logging("예약 성공")
+
+                            return self.driver
+                        else:
+                            print("잔여석 없음. 다시 검색")
+                            self.driver.back()  # 뒤로가기
+                            self.driver.implicitly_wait(5)
+
+                    if reserve and "신청하기" in reservation:
+                        # Error handling in case that click does not work
+                        try:
+                            self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(8) > a").click()
+                        except ElementClickInterceptedException as err:
+                            print(err)
+                            self.driver.find_element(By.CSS_SELECTOR, f"#result-form > fieldset > div.tbl_wrap.th_thead > table > tbody > tr:nth-child({i}) > td:nth-child(8) > a").send_keys(Keys.ENTER)
+                        finally:
+                            self.driver.implicitly_wait(3)
+
+                        try:
+                            for _ in range(3):
+                                time.sleep(1)
+                                alert = self.driver.switch_to.alert
+                                alert.accept()
+                                time.sleep(0.5)
+                        except:
+                            pass
+                        
+                        # 예약이 성공하면
+                        if self.driver.find_elements(By.ID, 'agree'):
+                            # self.driver.find_element(By.ID, 'agree').click()
+                            # self.driver.find_element(By.ID, 'smsY').click()
+                            # result = self.driver.switch_to_alert()
+                            # result.accept()
+                            # self.driver.find_element(By.ID, 'phoneNum1').send_keys(phoneNoMid)
+                            # self.driver.find_element(By.ID, 'phoneNum2').send_keys(phoneNoEnd)
+                            # self.driver.find_element(By.ID, 'diffSeatN').click()
+                            # self.driver.find_element(By.ID, 'moveTicketList').click()
+                            # result2 = self.driver.switch_to_alert()
+                            # result2.accept()
+
+                            print("예약 대기 완료")
+                            await self.telegram_logging("예약 대기 완료")
+                            self.is_booked = True
+                            return self.driver
+                        else:
+                            print("잔여석 없음. 다시 검색")
+                            self.driver.back()  # 뒤로가기
+                            self.driver.implicitly_wait(5)
+
+                if not self.is_booked:
+                    time.sleep(randint(2, 4))  # 2~4초 랜덤으로 기다리기
+                    
+                    # 다시 조회하기
+                    submit = self.driver.find_element(By.XPATH, "//input[@value='조회하기']")
+                    self.driver.execute_script("arguments[0].click();", submit)
+                    self.cnt_refresh += 1
+                    print(f"새로고침 {self.cnt_refresh}회")
+                    self.driver.implicitly_wait(10)
+                    time.sleep(0.5)
+                else:
+                    return self.driver
+            except UnexpectedAlertPresentException:
+                try:
+                    alert = self.driver.switch_to.alert
+                    print(f"Alert detected and accepted: {alert.text}")
+                    alert.accept()
+                except NoAlertPresentException:
+                    print("No alert present when attempting to accept alert.")
+                self.driver.back()
+                self.driver.implicitly_wait(5)
+                time.sleep(1)
+                        
     async def run(self):
         self.run_driver()
         self.login()
